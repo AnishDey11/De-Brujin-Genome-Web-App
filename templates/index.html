@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weighted De Bruijn Graph | Genome Construction</title>
+  <link rel="stylesheet" href="/static/style.css?v=20261007-3">
+</head>
+<body>
+<div class="app-shell">
+  <header class="hero">
+    <div class="hero-icon">🧬</div>
+    <div class="hero-copy">
+      <div class="eyebrow">AI / ML • GENOME ASSEMBLY</div>
+      <h1>Weighted De Bruijn Graph</h1>
+      <p>Genome construction using k-mers, frequency-based edge weights and best-path analysis.</p>
+    </div>
+    <div class="hero-badge">WEEKEND CHALLENGE · 01</div>
+  </header>
+
+  <section class="card controls-card">
+    <div class="section-title">
+      <span class="section-icon">⚙</span>
+      <div><h2>Dataset &amp; Parameters</h2><p>Choose one of the 10 reads, enter your own sequence, or upload a TXT / FASTA file.</p></div>
+    </div>
+
+    <div class="controls-grid">
+      <div class="control control-wide">
+        <label for="sequence">Sequencing read</label>
+        <select id="sequence"></select>
+      </div>
+      <div class="control small-control">
+        <label for="k">k-mer size</label>
+        <input id="k" type="number" value="21" min="2" max="100">
+      </div>
+      <button class="primary-btn" id="buildBtn">Build Graph <span>→</span></button>
+    </div>
+
+    <div class="sequence-viewer">
+      <div class="viewer-head"><strong>Selected DNA sequence</strong><span id="selectedMeta">Loading…</span></div>
+      <pre id="selectedSequence">-</pre>
+    </div>
+
+    <div class="custom-panel">
+      <div class="custom-head">
+        <div><strong>✍ Use your own sequence</strong><small>Paste DNA here. Spaces, line breaks and FASTA headers are ignored.</small></div>
+        <span class="dna-tip">A · C · G · T</span>
+      </div>
+      <textarea id="customSequence" placeholder="Example: ATGCGTACCGATGCTAGCTAG..."></textarea>
+      <div class="custom-actions">
+        <button class="secondary-btn" id="loadSelectedBtn">Copy selected sequence</button>
+        <button class="primary-btn" id="customBtn">Analyze Typed Sequence</button>
+        <button class="ghost-btn" id="clearCustomBtn">Clear</button>
+      </div>
+    </div>
+
+    <div class="upload-row">
+      <div class="upload-box">
+        <input id="file" type="file" accept=".txt,.fa,.fasta,.fna">
+        <button class="secondary-btn" id="uploadBtn">📁 Upload TXT / FASTA</button>
+      </div>
+      <div class="status" id="status">Loading dataset…</div>
+    </div>
+
+    <div class="weight-note">
+      <span>⚖</span>
+      <div><strong>Weight rule</strong><br>Every calculation uses <b>only the DNA input currently being analyzed</b>. Weight = exact k-mer frequency within that input.</div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><span>INPUT LENGTH</span><strong id="length">-</strong><small>base pairs</small></div>
+    <div class="stat"><span>k-MERS / EDGES</span><strong id="edges">-</strong><small>total edges</small></div>
+    <div class="stat"><span>UNIQUE k-MERS</span><strong id="unique">-</strong><small>distinct patterns</small></div>
+    <div class="stat"><span>NODES</span><strong id="nodes">-</strong><small>(k−1)-mers</small></div>
+    <div class="stat"><span>MAX WEIGHT</span><strong id="maxWeight">-</strong><small>highest frequency</small></div>
+    <div class="stat"><span>EULERIAN</span><strong id="eulerian">-</strong><small>all edges usable</small></div>
+  </section>
+
+  <section class="card best-card">
+    <div class="section-title">
+      <span class="section-icon trophy">🏆</span>
+      <div><h2>Weighted Best Path</h2><p>Higher-frequency k-mers contribute more to the path score.</p></div>
+    </div>
+    <div class="best-grid">
+      <div class="best-box"><span>BEST PATH SCORE</span><strong id="bestScore">-</strong></div>
+      <div class="best-box"><span>EDGES IN BEST PATH</span><strong id="bestEdges">-</strong></div>
+      <div class="best-box"><span>PATH METHOD</span><strong class="method" id="bestMethod">-</strong></div>
+    </div>
+    <div class="result-block"><h3>Best Path</h3><div class="sequence path-sequence" id="bestPath">-</div></div>
+    <div class="result-block"><h3>Best Reconstruction</h3><div class="sequence" id="bestReconstruction">-</div></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><span class="section-icon">🔗</span><div><h2>Eulerian Reconstruction</h2><p>Hierholzer’s algorithm attempts to use every graph edge exactly once.</p></div></div>
+    <div class="inline-results"><span><b>Score</b><strong id="eulerScore">-</strong></span><span><b>Edges Used</b><strong id="eulerEdges">-</strong></span></div>
+    <div class="sequence" id="eulerReconstruction">-</div>
+  </section>
+
+  <section class="card graph-card">
+    <div class="section-title"><span class="section-icon">🔬</span><div><h2>De Bruijn Graph</h2><p>Nodes are (k−1)-mers. Edges are k-mers. Labels show the k-mer and its weight; small arrows indicate direction.</p></div></div>
+    <div class="legend"><span><i class="legend-line low"></i> Low weight</span><span><i class="legend-line high"></i> High weight</span><span><i class="legend-node"></i> Node</span></div>
+    <div class="graph-wrap"><div id="graph"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><span class="section-icon">⚖</span><div><h2>Weighted Edge Table</h2><p>Weight = frequency of the exact k-mer in the current input only.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>k-mer</th><th>From</th><th>To</th><th>Weight</th><th>Normalized</th></tr></thead><tbody id="edgeTable"></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title"><span class="section-icon">📈</span><div><h2>k-mer Frequency Summary</h2><p>Most frequent exact k-mers in the current DNA input.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Rank</th><th>k-mer</th><th>Frequency</th></tr></thead><tbody id="frequencyTable"></tbody></table></div>
+  </section>
+
+  <footer>Weighted De Bruijn Genome Construction · FastAPI · Interactive Browser UI</footer>
+</div>
+<script src="/static/script.js?v=20261007-3"></script>
+</body>
+</html>
